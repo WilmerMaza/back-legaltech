@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.cursor/
 .env
 *.log
 .DS_Store
+*.md

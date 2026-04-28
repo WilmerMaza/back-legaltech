@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../../../../shared/infrastructure/prisma/prisma.client.js";
 import { requireAuth, requireRole } from "../../../../shared/security/auth.middleware.js";
-import { getNotificationQueueCountsSafe } from "../../../notifications/infrastructure/queue/notifications.queue.js";
 
 export const metricsRouter = Router();
 metricsRouter.use(requireAuth, requireRole("admin"));
@@ -67,33 +66,6 @@ metricsRouter.get("/evolucion-cartera", async (req, res, next) => {
       total: map.get(periodo) ?? 0,
     }));
     res.json({ series });
-  } catch (error) {
-    next(error);
-  }
-});
-
-metricsRouter.get("/notifications", async (_req, res, next) => {
-  try {
-    const [queued, sent, delivered, failed, retry, queueCounts] = await Promise.all([
-      prisma.notificationEvent.count({ where: { status: "queued" } }),
-      prisma.notificationEvent.count({ where: { status: "sent" } }),
-      prisma.notificationEvent.count({ where: { status: "delivered" } }),
-      prisma.notificationEvent.count({ where: { status: "failed" } }),
-      prisma.notificationWebhookEvent.count({ where: { event_type: "failed" } }),
-      getNotificationQueueCountsSafe(),
-    ]);
-
-    const backlog =
-      (queueCounts.waiting ?? 0) + (queueCounts.active ?? 0) + (queueCounts.delayed ?? 0);
-
-    res.json({
-      notifications_queued_total: queued,
-      notifications_sent_total: sent,
-      notifications_delivered_total: delivered,
-      notifications_failed_total: failed,
-      notifications_retry_total: retry,
-      notification_queue_backlog: backlog,
-    });
   } catch (error) {
     next(error);
   }

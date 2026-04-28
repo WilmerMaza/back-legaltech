@@ -76,32 +76,6 @@ enum EtapaProceso {
   @@map("etapa_proceso_enum")
 }
 
-enum NotificationChannel {
-  whatsapp
-
-  @@map("notification_channel_enum")
-}
-
-enum NotificationStage {
-  d_minus_3
-  d_day_0
-  d_plus_3
-
-  @@map("notification_stage_enum")
-}
-
-enum NotificationStatus {
-  queued
-  processing
-  sent
-  delivered
-  read
-  failed
-  cancelled
-
-  @@map("notification_status_enum")
-}
-
 model Cliente {
   id            String      @id @default(uuid())
   nombre        String
@@ -160,8 +134,6 @@ model Propiedad {
   historial_pagos HistorialPago[]
   gestiones       Gestion[]
   cuentas         Cuenta[]
-  notification_sequences NotificationSequence[]
-  notification_events    NotificationEvent[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -246,63 +218,4 @@ model RefreshToken {
 
   @@index([usuario_id], map: "idx_refresh_tokens_usuario")
   @@map("refresh_tokens")
-}
-
-model NotificationSequence {
-  id           String              @id @default(uuid())
-  propiedad_id String
-  propiedad    Propiedad           @relation(fields: [propiedad_id], references: [id])
-  channel      NotificationChannel @default(whatsapp)
-  due_date     DateTime            @db.Date
-  is_active    Boolean             @default(true)
-  created_at   DateTime            @default(now())
-  updated_at   DateTime            @updatedAt
-
-  events NotificationEvent[]
-
-  @@index([propiedad_id, due_date], map: "idx_notification_sequences_propiedad_due")
-  @@map("notification_sequences")
-}
-
-model NotificationEvent {
-  id                  String             @id @default(uuid())
-  sequence_id         String
-  sequence            NotificationSequence @relation(fields: [sequence_id], references: [id])
-  propiedad_id        String
-  propiedad           Propiedad          @relation(fields: [propiedad_id], references: [id])
-  stage               NotificationStage
-  channel             NotificationChannel @default(whatsapp)
-  status              NotificationStatus @default(queued)
-  scheduled_for       DateTime
-  sent_at             DateTime?
-  delivered_at        DateTime?
-  read_at             DateTime?
-  provider_message_id String?
-  error_code          String?
-  error_message       String?
-  idempotency_key     String             @unique
-  created_at          DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
-
-  webhook_events NotificationWebhookEvent[]
-
-  @@index([propiedad_id, created_at(sort: Desc)], map: "idx_notification_events_propiedad_created")
-  @@index([status, scheduled_for], map: "idx_notification_events_status_scheduled")
-  @@index([provider_message_id], map: "idx_notification_events_provider_message")
-  @@map("notification_events")
-}
-
-model NotificationWebhookEvent {
-  id                  String   @id @default(uuid())
-  notification_event_id String?
-  notification_event  NotificationEvent? @relation(fields: [notification_event_id], references: [id])
-  provider_message_id String
-  event_type          String
-  event_time          DateTime
-  payload             Json?
-  created_at          DateTime @default(now())
-
-  @@unique([provider_message_id, event_type, event_time], map: "uq_notification_webhook_dedupe")
-  @@index([provider_message_id], map: "idx_notification_webhook_provider_message")
-  @@map("notification_webhook_events")
 }
