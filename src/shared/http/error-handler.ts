@@ -30,7 +30,7 @@ export function errorHandler(
       code: "VALIDATION_ERROR",
       message: "Payload invalido",
       details: err.flatten(),
-      request_id: req.requestId,
+      request_id: req.requestId ?? "unknown",
     });
   }
 
@@ -39,7 +39,7 @@ export function errorHandler(
       code: err.code,
       message: err.message,
       details: err.details,
-      request_id: req.requestId,
+      request_id: req.requestId ?? "unknown",
     });
   }
 
@@ -49,13 +49,13 @@ export function errorHandler(
         code: "CONFLICT",
         message: "Conflicto por valor unico duplicado",
         details: err.meta,
-        request_id: req.requestId,
+        request_id: req.requestId ?? "unknown",
       });
     }
   }
 
   console.error("Unhandled error", {
-    request_id: req.requestId,
+    request_id: req.requestId ?? "unknown",
     method: req.method,
     path: req.path,
     error_name: err instanceof Error ? err.name : typeof err,
@@ -65,6 +65,6 @@ export function errorHandler(
   return res.status(500).json({
     code: "INTERNAL_ERROR",
     message: "Error interno",
-    request_id: req.requestId,
+    request_id: req.requestId ?? "unknown",
   });
 }

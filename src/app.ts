@@ -1,3 +1,4 @@
+/// <reference path="./types/express.d.ts" />
 import cors from "cors";
 import express from "express";
 import { randomUUID } from "node:crypto";
@@ -10,8 +11,9 @@ export function createApp() {
   app.use(cors());
   app.use(express.json());
   app.use((req, res, next) => {
-    req.requestId = randomUUID();
-    res.setHeader("x-request-id", req.requestId);
+    const requestId = randomUUID();
+    req.requestId = requestId;
+    res.setHeader("x-request-id", requestId);
     next();
   });
 
