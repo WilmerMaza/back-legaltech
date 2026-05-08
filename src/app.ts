@@ -17,6 +17,15 @@ export function createApp() {
     next();
   });
 
+  app.get("/", (req, res) => {
+    res.json({
+      name: "LegalTech API",
+      version: "1.0.0",
+      status: "online",
+      message: "Bienvenido a la API de LegalTech. Usa /api/v1 para acceder a los recursos.",
+    });
+  });
+
   app.use("/api/v1", v1Router);
 
   app.use(notFoundHandler);
