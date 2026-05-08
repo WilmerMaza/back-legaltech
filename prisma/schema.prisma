@@ -25,7 +25,11 @@ enum TipoPersona {
 
 enum TipoPropiedad {
   apartamento
+  oficina
   local
+  casa
+  bodega
+  garaje
   parqueadero
   otro
 

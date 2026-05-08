@@ -3,7 +3,15 @@ export type AuthContext = {
   cliente_id: string | null;
 };
 
-export type TipoPropiedad = "apartamento" | "local" | "parqueadero" | "otro";
+export type TipoPropiedad =
+  | "apartamento"
+  | "oficina"
+  | "local"
+  | "casa"
+  | "bodega"
+  | "garaje"
+  | "parqueadero"
+  | "otro";
 
 export type Propiedad = {
   id: string;

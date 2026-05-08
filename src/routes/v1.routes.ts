@@ -8,6 +8,10 @@ import { metricsRouter } from "../modules/metrics/infrastructure/http/metrics.ro
 
 export const v1Router = Router();
 
+v1Router.get("/", (_req, res) => {
+  res.json({ message: "API funcionando" });
+});
+
 v1Router.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });

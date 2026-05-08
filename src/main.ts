@@ -1,12 +1,15 @@
 import "dotenv/config";
 import { createApp } from "./app.js";
 import { prisma } from "./shared/infrastructure/prisma/prisma.client.js";
+import { v1Router } from "./routes/v1.routes.js";
 
 const port = Number(process.env.PORT) || 3000;
 const app = createApp();
-const server = app.listen(port, () => {
-  console.log(`API escuchando en http://127.0.0.1:${port}`);
+const server = app.listen(port, "0.0.0.0", () => {
+  console.log(`API escuchando en http://0.0.0.0:${port}`);
 });
+
+app.use("/v1", v1Router);
 
 async function shutdown(signal: string) {
   console.log(`${signal} recibido, cerrando API...`);

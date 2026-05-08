@@ -15,7 +15,16 @@ import { DeleteHistorialPagoUseCase } from "../../application/use-cases/delete-h
 
 const propiedadCreateSchema = z.object({
   cliente_id: z.string().uuid(),
-  tipo_propiedad: z.enum(["apartamento", "local", "parqueadero", "otro"]),
+  tipo_propiedad: z.enum([
+    "apartamento",
+    "oficina",
+    "local",
+    "casa",
+    "bodega",
+    "garaje",
+    "parqueadero",
+    "otro",
+  ]),
   identificador: z.string().min(1),
   direccion: z.string().optional(),
   notas: z.string().optional(),
