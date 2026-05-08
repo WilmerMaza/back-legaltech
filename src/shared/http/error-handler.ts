@@ -7,7 +7,12 @@ export class ApiError extends Error {
   code: string;
   details?: unknown;
 
-  constructor(status: number, code: string, message: string, details?: unknown) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.status = status;
     this.code = code;
@@ -15,8 +20,18 @@ export class ApiError extends Error {
   }
 }
 
-export function notFoundHandler(req: Request, _res: Response, next: NextFunction) {
-  next(new ApiError(404, "NOT_FOUND", `Ruta no encontrada: ${req.method} ${req.path}`));
+export function notFoundHandler(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
+  next(
+    new ApiError(
+      404,
+      "NOT_FOUND",
+      `Ruta no encontrada: ${req.method} ${req.path}`,
+    ),
+  );
 }
 
 export function errorHandler(
