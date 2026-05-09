@@ -58,12 +58,15 @@ export function errorHandler(
     });
   }
 
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === "P2002") {
+  // @ts-ignore - Prisma namespace/value interop issue in some TS versions
+  const KnownError = (Prisma as any).PrismaClientKnownRequestError;
+  if (KnownError && err instanceof KnownError) {
+    const prismaErr = err as Prisma.PrismaClientKnownRequestError;
+    if (prismaErr.code === "P2002") {
       return res.status(409).json({
         code: "CONFLICT",
         message: "Conflicto por valor unico duplicado",
-        details: err.meta,
+        details: prismaErr.meta,
         request_id: req.requestId ?? "unknown",
       });
     }

@@ -98,8 +98,13 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
         await tx.propiedad.delete({ where: { id } });
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-        throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
+      // @ts-ignore
+      const KnownError = (Prisma as any).PrismaClientKnownRequestError;
+      if (KnownError && error instanceof KnownError) {
+        const prismaErr = error as Prisma.PrismaClientKnownRequestError;
+        if (prismaErr.code === "P2025") {
+          throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
+        }
       }
       throw error;
     }
