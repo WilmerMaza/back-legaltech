@@ -101,8 +101,7 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
       // @ts-ignore
       const KnownError = (Prisma as any).PrismaClientKnownRequestError;
       if (KnownError && error instanceof KnownError) {
-        const prismaErr = error as Prisma.PrismaClientKnownRequestError;
-        if (prismaErr.code === "P2025") {
+        if ((error as any).code === "P2025") {
           throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
         }
       }
