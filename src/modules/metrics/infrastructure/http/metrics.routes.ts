@@ -30,7 +30,7 @@ metricsRouter.get("/distribucion-estados", async (_req, res, next) => {
       _count: { _all: true },
     });
 
-    const result = { activa: 0, en_proceso: 0, cerrada: 0 };
+    const result: Record<string, number> = { activa: 0, en_proceso: 0, cerrada: 0 };
     for (const row of grouped) {
       result[row.estado] = row._count._all;
     }
