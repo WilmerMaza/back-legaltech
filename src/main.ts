@@ -4,10 +4,12 @@ import { prisma } from "./shared/infrastructure/prisma/prisma.client.js";
 import { v1Router } from "./routes/v1.routes.js";
 
 const port = Number(process.env.PORT) || 3000;
-const app = createApp();
+export const app = createApp();
 const server = app.listen(port, "0.0.0.0", () => {
   console.log(`API escuchando en http://0.0.0.0:${port}`);
 });
+
+export default app;
 
 app.use("/v1", v1Router);
 
