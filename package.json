@@ -6,7 +6,7 @@
   "description": "Backend API: Node.js (Express) + Prisma + PostgreSQL. Blueprint: BACKEND_API_NODE_POSTGRES_AWS.md",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && prisma migrate deploy && tsc",
     "start": "node dist/main.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
