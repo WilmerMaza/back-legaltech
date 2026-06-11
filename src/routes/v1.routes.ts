@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { prisma } from "../shared/infrastructure/prisma/prisma.client.js";
 import { authRouter } from "../modules/auth/infrastructure/http/auth.routes.js";
 import { clientesRouter } from "../modules/clientes/infrastructure/http/clientes.routes.js";
 import { propiedadesRouter } from "../modules/propiedades/infrastructure/http/propiedades.routes.js";
@@ -13,8 +14,13 @@ v1Router.get("/", (_req, res) => {
   res.json({ message: "API funcionando" });
 });
 
-v1Router.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
+v1Router.get("/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", database: "ok" });
+  } catch {
+    res.status(503).json({ status: "degraded", database: "unavailable" });
+  }
 });
 
 v1Router.use("/auth", authRouter);

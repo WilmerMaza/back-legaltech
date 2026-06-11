@@ -85,7 +85,10 @@ export class LoginUseCase {
         throw error;
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new ApiError(503, "AUTH_STORAGE_ERROR", "No se pudo guardar la sesion");
+        console.error("auth_storage_error", { code: error.code, meta: error.meta });
+        throw new ApiError(503, "AUTH_STORAGE_ERROR", "No se pudo guardar la sesion", {
+          prisma_code: error.code,
+        });
       }
       throw error;
     }

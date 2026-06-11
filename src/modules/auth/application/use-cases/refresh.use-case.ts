@@ -115,7 +115,10 @@ export class RefreshUseCase {
           throw error;
         }
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-          throw new ApiError(503, "AUTH_STORAGE_ERROR", "No se pudo renovar la sesion");
+          console.error("auth_storage_error", { code: error.code, meta: error.meta });
+          throw new ApiError(503, "AUTH_STORAGE_ERROR", "No se pudo renovar la sesion", {
+            prisma_code: error.code,
+          });
         }
         throw error;
       }
