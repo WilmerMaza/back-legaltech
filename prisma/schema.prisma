@@ -1,7 +1,6 @@
-// Alineado a BACKEND_API_NODE_POSTGRES_AWS.md (sección 7.1 + nombres de tablas §6.6)
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

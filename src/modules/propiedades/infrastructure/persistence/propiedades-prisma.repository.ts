@@ -145,14 +145,18 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
 
   async deletePropiedadCascade(id: string): Promise<void> {
     try {
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         await tx.historialPago.deleteMany({ where: { propiedad_id: id } });
         await tx.gestion.deleteMany({ where: { propiedad_id: id } });
         await tx.propiedad.delete({ where: { id } });
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-        throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
+      // @ts-ignore
+      const KnownError = (Prisma as any).PrismaClientKnownRequestError;
+      if (KnownError && error instanceof KnownError) {
+        if ((error as any).code === "P2025") {
+          throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
+        }
       }
       throw error;
     }
@@ -177,7 +181,7 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     fecha_inicio_cobro?: string | null;
     fecha_fin_cobro?: string | null;
   }): Promise<HistorialPago> {
-    return (await prisma.$transaction(async (tx) => {
+    return (await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const propiedad = await tx.propiedad.findUnique({ where: { id: input.propiedadId } });
       if (!propiedad) {
         throw new ApiError(404, "NOT_FOUND", "Propiedad no encontrada");
@@ -239,7 +243,7 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     propiedadId: string;
     historialId: string;
   }): Promise<void> {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const historial = await tx.historialPago.findUnique({ where: { id: input.historialId } });
       if (!historial || historial.propiedad_id !== input.propiedadId) {
         throw new ApiError(404, "NOT_FOUND", "Historial no encontrado para la propiedad");

@@ -7,7 +7,12 @@ export class ApiError extends Error {
   code: string;
   details?: unknown;
 
-  constructor(status: number, code: string, message: string, details?: unknown) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.status = status;
     this.code = code;
@@ -15,8 +20,18 @@ export class ApiError extends Error {
   }
 }
 
-export function notFoundHandler(req: Request, _res: Response, next: NextFunction) {
-  next(new ApiError(404, "NOT_FOUND", `Ruta no encontrada: ${req.method} ${req.path}`));
+export function notFoundHandler(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
+  next(
+    new ApiError(
+      404,
+      "NOT_FOUND",
+      `Ruta no encontrada: ${req.method} ${req.path}`,
+    ),
+  );
 }
 
 export function errorHandler(
@@ -30,7 +45,7 @@ export function errorHandler(
       code: "VALIDATION_ERROR",
       message: "Payload invalido",
       details: err.flatten(),
-      request_id: req.requestId,
+      request_id: req.requestId ?? "unknown",
     });
   }
 
@@ -39,7 +54,7 @@ export function errorHandler(
       code: err.code,
       message: err.message,
       details: err.details,
-      request_id: req.requestId,
+      request_id: req.requestId ?? "unknown",
     });
   }
 
@@ -52,7 +67,7 @@ export function errorHandler(
     return res.status(413).json({
       code: "PAYLOAD_TOO_LARGE",
       message: "El cuerpo de la solicitud supera el límite permitido",
-      request_id: req.requestId,
+      request_id: req.requestId ?? "unknown",
     });
   }
 
@@ -62,13 +77,13 @@ export function errorHandler(
         code: "CONFLICT",
         message: "Conflicto por valor unico duplicado",
         details: err.meta,
-        request_id: req.requestId,
+        request_id: req.requestId ?? "unknown",
       });
     }
   }
 
   console.error("Unhandled error", {
-    request_id: req.requestId,
+    request_id: req.requestId ?? "unknown",
     method: req.method,
     path: req.path,
     error_name: err instanceof Error ? err.name : typeof err,
@@ -78,6 +93,6 @@ export function errorHandler(
   return res.status(500).json({
     code: "INTERNAL_ERROR",
     message: "Error interno",
-    request_id: req.requestId,
+    request_id: req.requestId ?? "unknown",
   });
 }
