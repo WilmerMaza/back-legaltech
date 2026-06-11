@@ -1,6 +1,6 @@
 /**
- * Prisma Postgres en Vercel debe usar pooled.db.prisma.io en runtime.
- * Si DATABASE_URL apunta a db.prisma.io (direct), la reescribimos en serverless.
+ * Prisma Postgres: la app debe usar pooled.db.prisma.io en runtime.
+ * db.prisma.io es solo para migraciones/CLI.
  */
 export function getRuntimeDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -8,8 +8,7 @@ export function getRuntimeDatabaseUrl(): string {
     throw new Error("DATABASE_URL no esta configurada");
   }
 
-  const isServerless = Boolean(process.env.VERCEL);
-  if (isServerless && url.includes("@db.prisma.io")) {
+  if (url.includes("@db.prisma.io") && !url.includes("@pooled.db.prisma.io")) {
     return url.replace("@db.prisma.io", "@pooled.db.prisma.io");
   }
 
