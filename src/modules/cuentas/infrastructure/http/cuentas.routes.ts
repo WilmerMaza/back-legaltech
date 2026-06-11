@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { ETAPA_PROCESO_VALUES } from "../../domain/etapa-proceso.js";
 import { prisma } from "../../../../shared/infrastructure/prisma/prisma.client.js";
 import {
   requireAuth,
@@ -13,7 +14,7 @@ const createSchema = z.object({
   numero_cuenta: z.string().min(1),
   tipo: z.enum(["juridica", "extrajudicial", "acuerdo_de_pago"]),
   estado: z.enum(["activa", "cerrada", "en_proceso"]),
-  etapa_proceso: z.enum(["inicial", "notificacion", "conciliacion", "demanda", "ejecucion"]),
+  etapa_proceso: z.enum(ETAPA_PROCESO_VALUES),
 });
 
 const patchSchema = createSchema

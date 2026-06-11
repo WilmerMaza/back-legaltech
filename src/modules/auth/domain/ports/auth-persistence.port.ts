@@ -25,6 +25,8 @@ export type ActiveRefreshToken = {
   usuario_id: string;
   token_hash: string;
   revoked_at: Date | null;
+  session_expires_at: Date;
+  last_used_at: Date;
 };
 
 export type AuthPersistenceRotateRefreshTokenInput = {
@@ -32,6 +34,8 @@ export type AuthPersistenceRotateRefreshTokenInput = {
   usuario_id: string;
   newTokenHash: string;
   newExpiresAt: Date;
+  session_expires_at: Date;
+  last_used_at: Date;
 };
 
 export type AuthPersistenceRevokeRefreshTokensInput = {
@@ -54,6 +58,8 @@ export interface AuthPersistencePort {
     usuario_id: string;
     token_hash: string;
     expires_at: Date;
+    session_expires_at: Date;
+    last_used_at: Date;
   }): Promise<{ id: string }>;
 
   findActiveRefreshToken(input: {
@@ -61,7 +67,11 @@ export interface AuthPersistencePort {
     token_hash: string;
   }): Promise<ActiveRefreshToken | null>;
 
-  rotateRefreshToken(input: AuthPersistenceRotateRefreshTokenInput): Promise<void>;
+  rotateRefreshToken(
+    input: AuthPersistenceRotateRefreshTokenInput,
+  ): Promise<{ newRefreshTokenId: string }>;
+
+  touchRefreshTokenLastUsed(input: { id: string; last_used_at: Date }): Promise<void>;
 
   revokeRefreshTokens(input: AuthPersistenceRevokeRefreshTokensInput): Promise<void>;
 }

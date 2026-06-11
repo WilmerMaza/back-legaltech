@@ -15,8 +15,10 @@ export async function refreshPropiedadMoraAggregates(
     where: { id: propiedadId },
     data: {
       edad_mora_dias: agg._max.dias_en_mora ?? null,
-      fecha_inicio_cobro: agg._min.fecha_inicio_cobro ?? null,
-      fecha_fin_cobro: agg._max.fecha_fin_cobro ?? null,
+      ...(agg._min.fecha_inicio_cobro != null
+        ? { fecha_inicio_cobro: agg._min.fecha_inicio_cobro }
+        : {}),
+      ...(agg._max.fecha_fin_cobro != null ? { fecha_fin_cobro: agg._max.fecha_fin_cobro } : {}),
     },
   });
 }

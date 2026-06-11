@@ -43,6 +43,19 @@ export function errorHandler(
     });
   }
 
+  if (
+    err &&
+    typeof err === "object" &&
+    "type" in err &&
+    (err as { type: string }).type === "entity.too.large"
+  ) {
+    return res.status(413).json({
+      code: "PAYLOAD_TOO_LARGE",
+      message: "El cuerpo de la solicitud supera el límite permitido",
+      request_id: req.requestId,
+    });
+  }
+
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
       return res.status(409).json({

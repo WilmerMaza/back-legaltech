@@ -1,6 +1,7 @@
 import type {
   PropiedadesPersistencePort,
   Propiedad,
+  TipoPersona,
   TipoPropiedad,
 } from "../../domain/ports/propiedades-persistence.port.js";
 
@@ -14,6 +15,11 @@ export class UpdatePropiedadUseCase {
     direccion?: string;
     notas?: string;
     saldo_inicial?: number;
+    cobro_nombre?: string;
+    cobro_tipo_persona?: TipoPersona;
+    cobro_documento?: string;
+    cobro_email?: string;
+    fecha_inicio_cobro?: string | null;
   }): Promise<Propiedad> {
     return this.deps.propiedadesPersistence.updatePropiedad(input);
   }

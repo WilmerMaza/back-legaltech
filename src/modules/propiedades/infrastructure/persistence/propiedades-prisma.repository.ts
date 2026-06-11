@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { getBusinessTodayYmd } from "../../domain/business-calendar.js";
 import { computeDiasEnMora } from "../../domain/mora.js";
 import { refreshPropiedadMoraAggregates } from "./refresh-mora-aggregates.js";
+import { recomputeHistorialSaldosForPropiedad } from "./recompute-historial-saldos.js";
 import type {
   ConceptoPago,
   EstadoPago,
@@ -11,17 +12,26 @@ import type {
   PropiedadesPersistencePort,
   Propiedad,
   Gestion,
+  TipoPersona,
   TipoPropiedad,
 } from "../../domain/ports/propiedades-persistence.port.js";
 
-function cobroDateFromInput(value: string | null | undefined): Date | null {
-  if (value === undefined || value === null) return null;
-  return new Date(`${value}T12:00:00.000Z`);
+function ymdToUtcNoon(value: string, field: string): Date {
+  const d = new Date(`${value}T12:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) {
+    throw new ApiError(400, "VALIDATION_ERROR", `${field} inválida`);
+  }
+  return d;
 }
 
-function fechaPagoFromInput(value: string | undefined): Date | null {
-  if (!value) return null;
-  return new Date(`${value}T12:00:00.000Z`);
+function cobroDateFromInput(value: string | null | undefined): Date | null {
+  if (value === undefined || value === null) return null;
+  return ymdToUtcNoon(value, "fecha de cobro");
+}
+
+function fechaPagoFromInput(value: string | null | undefined): Date | null {
+  if (value === undefined || value === null) return null;
+  return ymdToUtcNoon(value, "fecha_pago");
 }
 
 export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
@@ -49,7 +59,28 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     direccion?: string | undefined;
     notas?: string | undefined;
     saldo_inicial?: number | undefined;
+    fecha_inicio_cobro?: string | null | undefined;
+    cobro_nombre: string;
+    cobro_tipo_persona: TipoPersona;
+    cobro_documento: string;
+    cobro_email: string;
   }): Promise<Propiedad> {
+    const cliente = await prisma.cliente.findUnique({ where: { id: input.cliente_id } });
+    if (!cliente) {
+      throw new ApiError(404, "NOT_FOUND", "Cliente no encontrado");
+    }
+
+    const cobro_nombre = input.cobro_nombre.trim();
+    const cobro_documento = input.cobro_documento.trim();
+    const cobro_email = input.cobro_email.trim();
+    if (!cobro_nombre || !cobro_documento || !cobro_email) {
+      throw new ApiError(
+        400,
+        "VALIDATION_ERROR",
+        "Los datos de cobro (nombre, documento y correo) son obligatorios",
+      );
+    }
+
     return (await prisma.propiedad.create({
       data: {
         cliente_id: input.cliente_id,
@@ -58,6 +89,11 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
         direccion: input.direccion,
         notas: input.notas,
         monto_a_la_fecha: input.saldo_inicial ?? 0,
+        cobro_nombre,
+        cobro_tipo_persona: input.cobro_tipo_persona,
+        cobro_documento,
+        cobro_email,
+        fecha_inicio_cobro: cobroDateFromInput(input.fecha_inicio_cobro),
       },
     })) as unknown as Propiedad;
   }
@@ -69,6 +105,11 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     direccion?: string | undefined;
     notas?: string | undefined;
     saldo_inicial?: number | undefined;
+    cobro_nombre?: string | undefined;
+    cobro_tipo_persona?: TipoPersona | undefined;
+    cobro_documento?: string | undefined;
+    cobro_email?: string | undefined;
+    fecha_inicio_cobro?: string | null | undefined;
   }): Promise<Propiedad> {
     const data: {
       tipo_propiedad?: TipoPropiedad;
@@ -76,6 +117,11 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
       direccion?: string;
       notas?: string;
       monto_a_la_fecha?: number;
+      cobro_nombre?: string;
+      cobro_tipo_persona?: TipoPersona;
+      cobro_documento?: string;
+      cobro_email?: string;
+      fecha_inicio_cobro?: Date | null;
     } = {};
 
     if (input.tipo_propiedad !== undefined) data.tipo_propiedad = input.tipo_propiedad;
@@ -83,6 +129,13 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     if (input.direccion !== undefined) data.direccion = input.direccion;
     if (input.notas !== undefined) data.notas = input.notas;
     if (input.saldo_inicial !== undefined) data.monto_a_la_fecha = input.saldo_inicial;
+    if (input.cobro_nombre !== undefined) data.cobro_nombre = input.cobro_nombre;
+    if (input.cobro_tipo_persona !== undefined) data.cobro_tipo_persona = input.cobro_tipo_persona;
+    if (input.cobro_documento !== undefined) data.cobro_documento = input.cobro_documento;
+    if (input.cobro_email !== undefined) data.cobro_email = input.cobro_email;
+    if (input.fecha_inicio_cobro !== undefined) {
+      data.fecha_inicio_cobro = cobroDateFromInput(input.fecha_inicio_cobro);
+    }
 
     return (await prisma.propiedad.update({
       where: { id: input.id },
@@ -118,7 +171,7 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
     concepto: ConceptoPago;
     valor_cobrado: number;
     valor_pagado: number;
-    fecha_pago?: string | undefined;
+    fecha_pago?: string | null | undefined;
     estado_pago: EstadoPago;
     observaciones?: string | undefined;
     fecha_inicio_cobro?: string | null;
@@ -193,19 +246,56 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
       }
 
       await tx.historialPago.delete({ where: { id: input.historialId } });
-
-      const last = await tx.historialPago.findFirst({
-        where: { propiedad_id: input.propiedadId },
-        orderBy: [{ created_at: "desc" }, { id: "desc" }],
-      });
-
-      await tx.propiedad.update({
-        where: { id: input.propiedadId },
-        data: { monto_a_la_fecha: Number(last?.monto_a_la_fecha ?? 0) },
-      });
-
-      await refreshPropiedadMoraAggregates(tx, input.propiedadId);
+      await recomputeHistorialSaldosForPropiedad(tx, input.propiedadId);
     });
+  }
+
+  async updateHistorialPagoAndUpdateSaldo(input: {
+    propiedadId: string;
+    historialId: string;
+    periodo: string;
+    concepto: ConceptoPago;
+    valor_cobrado: number;
+    valor_pagado: number;
+    fecha_pago?: string | null | undefined;
+    estado_pago: EstadoPago;
+    observaciones?: string | undefined;
+    fecha_inicio_cobro?: string | null;
+    fecha_fin_cobro?: string | null;
+  }): Promise<HistorialPago> {
+    return (await prisma.$transaction(async (tx) => {
+      const historial = await tx.historialPago.findUnique({ where: { id: input.historialId } });
+      if (!historial || historial.propiedad_id !== input.propiedadId) {
+        throw new ApiError(404, "NOT_FOUND", "Historial no encontrado para la propiedad");
+      }
+
+      const fechaPagoDate = fechaPagoFromInput(input.fecha_pago);
+      const fechaInicioCobro = cobroDateFromInput(input.fecha_inicio_cobro);
+      const fechaFinCobro = cobroDateFromInput(input.fecha_fin_cobro);
+      if (fechaInicioCobro && fechaFinCobro && fechaFinCobro < fechaInicioCobro) {
+        throw new ApiError(400, "VALIDATION_ERROR", "fecha_fin_cobro debe ser >= fecha_inicio_cobro");
+      }
+
+      await tx.historialPago.update({
+        where: { id: input.historialId },
+        data: {
+          periodo: input.periodo,
+          concepto: input.concepto,
+          valor_cobrado: input.valor_cobrado,
+          valor_pagado: input.valor_pagado,
+          fecha_pago: fechaPagoDate,
+          estado_pago: input.estado_pago,
+          observaciones: input.observaciones,
+          fecha_inicio_cobro: fechaInicioCobro,
+          fecha_fin_cobro: fechaFinCobro,
+        },
+      });
+
+      await recomputeHistorialSaldosForPropiedad(tx, input.propiedadId);
+
+      const updated = await tx.historialPago.findUnique({ where: { id: input.historialId } });
+      return updated!;
+    })) as unknown as HistorialPago;
   }
 
   async listGestionesByPropiedadId(propiedadId: string): Promise<Gestion[]> {
@@ -229,6 +319,40 @@ export class PropiedadesPrismaRepository implements PropiedadesPersistencePort {
         descripcion: input.descripcion,
       },
     })) as unknown as Gestion;
+  }
+
+  async updateGestionForPropiedad(input: {
+    propiedadId: string;
+    gestionId: string;
+    fecha?: string;
+    estado?: string;
+    descripcion?: string;
+  }): Promise<Gestion> {
+    const gestion = await prisma.gestion.findUnique({ where: { id: input.gestionId } });
+    if (!gestion || gestion.propiedad_id !== input.propiedadId) {
+      throw new ApiError(404, "NOT_FOUND", "Gestion no encontrada para la propiedad");
+    }
+
+    return (await prisma.gestion.update({
+      where: { id: input.gestionId },
+      data: {
+        ...(input.fecha != null ? { fecha: new Date(input.fecha) } : {}),
+        ...(input.estado != null ? { estado: input.estado } : {}),
+        ...(input.descripcion != null ? { descripcion: input.descripcion } : {}),
+      },
+    })) as unknown as Gestion;
+  }
+
+  async deleteGestionForPropiedad(input: {
+    propiedadId: string;
+    gestionId: string;
+  }): Promise<void> {
+    const gestion = await prisma.gestion.findUnique({ where: { id: input.gestionId } });
+    if (!gestion || gestion.propiedad_id !== input.propiedadId) {
+      throw new ApiError(404, "NOT_FOUND", "Gestion no encontrada para la propiedad");
+    }
+
+    await prisma.gestion.delete({ where: { id: input.gestionId } });
   }
 }
 
