@@ -8,7 +8,7 @@
     "dev": "tsx watch src/main.ts",
     "postinstall": "prisma generate",
     "build": "prisma generate && tsc && mkdir -p dist/modules/payment-reminders/infrastructure/email/assets && cp -R src/modules/payment-reminders/infrastructure/email/assets dist/modules/payment-reminders/infrastructure/email/",
-    "vercel-build": "prisma migrate deploy && npm run build",
+    "vercel-build": "npm run build",
     "start": "node dist/main.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
