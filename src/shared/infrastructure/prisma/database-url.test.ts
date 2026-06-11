@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { getRuntimeDatabaseUrl } from "./database-url.js";
+import {
+  ensureRuntimeDatabaseUrl,
+  getRuntimeDatabaseUrl,
+} from "./database-url.js";
 
 describe("getRuntimeDatabaseUrl", () => {
   const direct =
@@ -16,5 +19,11 @@ describe("getRuntimeDatabaseUrl", () => {
   it("deja pooled sin cambios", () => {
     process.env.DATABASE_URL = pooled;
     assert.equal(getRuntimeDatabaseUrl(), pooled);
+  });
+
+  it("ensureRuntimeDatabaseUrl actualiza DATABASE_URL", () => {
+    process.env.DATABASE_URL = direct;
+    ensureRuntimeDatabaseUrl();
+    assert.equal(process.env.DATABASE_URL, pooled);
   });
 });

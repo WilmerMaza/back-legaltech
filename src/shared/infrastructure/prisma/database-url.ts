@@ -14,3 +14,8 @@ export function getRuntimeDatabaseUrl(): string {
 
   return url;
 }
+
+/** Aplica la URL pooled antes de que Prisma Client lea DATABASE_URL. */
+export function ensureRuntimeDatabaseUrl(): void {
+  process.env.DATABASE_URL = getRuntimeDatabaseUrl();
+}

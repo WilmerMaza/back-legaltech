@@ -1,5 +1,8 @@
 import { ApiError } from "../../../../shared/http/error-handler.js";
-import { Prisma } from "@prisma/client";
+import {
+  getPrismaErrorCode,
+  isPrismaKnownRequestError,
+} from "../../../../shared/infrastructure/prisma/prisma-errors.js";
 import {
   cacheRefreshRotation,
   getCachedRefreshRotation,
@@ -114,10 +117,11 @@ export class RefreshUseCase {
         if (error instanceof ApiError) {
           throw error;
         }
-        if (error instanceof Prisma.PrismaClientKnownRequestError) {
-          console.error("auth_storage_error", { code: error.code, meta: error.meta });
+        if (isPrismaKnownRequestError(error)) {
+          const prisma_code = getPrismaErrorCode(error);
+          console.error("auth_storage_error", { code: prisma_code, error });
           throw new ApiError(503, "AUTH_STORAGE_ERROR", "No se pudo renovar la sesion", {
-            prisma_code: error.code,
+            prisma_code,
           });
         }
         throw error;

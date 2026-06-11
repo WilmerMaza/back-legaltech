@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import { getRuntimeDatabaseUrl } from "./database-url.js";
+import { ensureRuntimeDatabaseUrl } from "./database-url.js";
+
+ensureRuntimeDatabaseUrl();
 
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
@@ -7,17 +9,12 @@ const globalForPrisma = globalThis as typeof globalThis & {
 
 export const prisma =
   globalForPrisma.prisma ??
-  new PrismaClient({
-    datasources: {
-      db: { url: getRuntimeDatabaseUrl() },
-    },
-  });
+  new PrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// En Vercel (serverless) reutilizar la misma instancia entre invocaciones calientes.
 if (process.env.VERCEL) {
   globalForPrisma.prisma = prisma;
 }
