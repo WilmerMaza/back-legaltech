@@ -17,7 +17,14 @@ const clienteCreateSchema = z.object({
   observaciones: z.string().optional(),
 });
 
-const clientePatchSchema = clienteCreateSchema.partial();
+const clientePatchSchema = z.object({
+  nombre: z.string().min(1).optional(),
+  tipo_persona: z.enum(["natural", "juridica"]).optional(),
+  telefono: z.string().optional(),
+  email: z.string().email().optional(),
+  direccion: z.string().optional(),
+  observaciones: z.string().optional(),
+});
 
 export const clientesRouter = Router();
 clientesRouter.use(requireAuth);
@@ -74,6 +81,10 @@ clientesRouter.post("/", requireRole("admin"), async (req, res, next) => {
 clientesRouter.patch("/:id", requireOwnershipOrAdmin("id"), async (req, res, next) => {
   try {
     const dto = clientePatchSchema.parse(req.body);
+    const existing = await prisma.cliente.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ code: "NOT_FOUND", message: "Cliente no encontrado" });
+    }
     const updated = await prisma.cliente.update({
       where: { id: req.params.id },
       data: dto,

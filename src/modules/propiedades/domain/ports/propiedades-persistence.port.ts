@@ -13,6 +13,15 @@ export type TipoPropiedad =
   | "parqueadero"
   | "otro";
 
+export type TipoPersona = "natural" | "juridica";
+
+export type CobroFields = {
+  cobro_nombre: string;
+  cobro_tipo_persona: TipoPersona;
+  cobro_documento: string;
+  cobro_email: string;
+};
+
 export type Propiedad = {
   id: string;
   cliente_id: string;
@@ -20,6 +29,10 @@ export type Propiedad = {
   identificador: string;
   direccion: string | null;
   notas: string | null;
+  cobro_nombre: string;
+  cobro_tipo_persona: TipoPersona;
+  cobro_documento: string;
+  cobro_email: string;
   monto_a_la_fecha: unknown; // Prisma Decimal (runtime) -> JSON compatible
   edad_mora_dias: number | null;
   fecha_inicio_cobro: Date | null;
@@ -74,6 +87,11 @@ export interface PropiedadesPersistencePort {
     direccion?: string;
     notas?: string;
     saldo_inicial?: number;
+    fecha_inicio_cobro?: string | null;
+    cobro_nombre: string;
+    cobro_tipo_persona: TipoPersona;
+    cobro_documento: string;
+    cobro_email: string;
   }): Promise<Propiedad>;
 
   updatePropiedad(input: {
@@ -83,6 +101,11 @@ export interface PropiedadesPersistencePort {
     direccion?: string;
     notas?: string;
     saldo_inicial?: number;
+    cobro_nombre?: string;
+    cobro_tipo_persona?: TipoPersona;
+    cobro_documento?: string;
+    cobro_email?: string;
+    fecha_inicio_cobro?: string | null;
   }): Promise<Propiedad>;
 
   deletePropiedadCascade(id: string): Promise<void>;
@@ -95,7 +118,7 @@ export interface PropiedadesPersistencePort {
     concepto: ConceptoPago;
     valor_cobrado: number;
     valor_pagado: number;
-    fecha_pago?: string;
+    fecha_pago?: string | null;
     estado_pago: EstadoPago;
     observaciones?: string;
     fecha_inicio_cobro?: string | null;
@@ -107,6 +130,20 @@ export interface PropiedadesPersistencePort {
     historialId: string;
   }): Promise<void>;
 
+  updateHistorialPagoAndUpdateSaldo(input: {
+    propiedadId: string;
+    historialId: string;
+    periodo: string;
+    concepto: ConceptoPago;
+    valor_cobrado: number;
+    valor_pagado: number;
+    fecha_pago?: string | null;
+    estado_pago: EstadoPago;
+    observaciones?: string;
+    fecha_inicio_cobro?: string | null;
+    fecha_fin_cobro?: string | null;
+  }): Promise<HistorialPago>;
+
   listGestionesByPropiedadId(propiedadId: string): Promise<Gestion[]>;
 
   createGestionForPropiedad(input: {
@@ -115,5 +152,18 @@ export interface PropiedadesPersistencePort {
     estado: string;
     descripcion: string;
   }): Promise<Gestion>;
+
+  updateGestionForPropiedad(input: {
+    propiedadId: string;
+    gestionId: string;
+    fecha?: string;
+    estado?: string;
+    descripcion?: string;
+  }): Promise<Gestion>;
+
+  deleteGestionForPropiedad(input: {
+    propiedadId: string;
+    gestionId: string;
+  }): Promise<void>;
 }
 

@@ -14,7 +14,7 @@ export class CreateHistorialPagoUseCase {
     concepto: ConceptoPago;
     valor_cobrado: number;
     valor_pagado: number;
-    fecha_pago?: string;
+    fecha_pago?: string | null;
     estado_pago: EstadoPago;
     observaciones?: string;
     fecha_inicio_cobro?: string | null;

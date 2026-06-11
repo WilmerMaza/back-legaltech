@@ -5,6 +5,7 @@ export interface TokenServicePort {
   signRefreshToken(payload: AuthUserPayload): string;
   verifyRefreshToken(token: string): AuthUserPayload;
   getRefreshTokenExpirationDate(token: string): Date;
+  getAccessTokenExpiresInSeconds(token: string): number;
   hashToken(token: string): string;
 }
 

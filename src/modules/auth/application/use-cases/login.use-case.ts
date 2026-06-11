@@ -1,5 +1,10 @@
 import { ApiError } from "../../../../shared/http/error-handler.js";
 import { Prisma } from "@prisma/client";
+import {
+  computeSessionExpiresAt,
+  getIdleTimeoutSeconds,
+  minDate,
+} from "../../../../shared/security/session-policy.js";
 import type {
   AuthPersistencePort,
   AuthUserPayload,
@@ -15,6 +20,9 @@ export type LoginInput = {
 export type LoginOutput = {
   access_token: string;
   refresh_token: string;
+  expires_in: number;
+  session_expires_at: string;
+  idle_timeout_seconds: number;
   user: AuthUserPayload;
 };
 
@@ -48,11 +56,14 @@ export class LoginUseCase {
     let access_token: string;
     let refresh_token: string;
     let expires_at: Date;
+    const now = new Date();
+    const session_expires_at = computeSessionExpiresAt(now);
 
     try {
       access_token = this.deps.tokenService.signAccessToken(payload);
       refresh_token = this.deps.tokenService.signRefreshToken(payload);
-      expires_at = this.deps.tokenService.getRefreshTokenExpirationDate(refresh_token);
+      const jwtRefreshExpiresAt = this.deps.tokenService.getRefreshTokenExpirationDate(refresh_token);
+      expires_at = minDate(jwtRefreshExpiresAt, session_expires_at);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
@@ -66,6 +77,8 @@ export class LoginUseCase {
         usuario_id: user.id,
         token_hash: this.deps.tokenService.hashToken(refresh_token),
         expires_at,
+        session_expires_at,
+        last_used_at: now,
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -77,7 +90,14 @@ export class LoginUseCase {
       throw error;
     }
 
-    return { access_token, refresh_token, user: payload };
+    return {
+      access_token,
+      refresh_token,
+      expires_in: this.deps.tokenService.getAccessTokenExpiresInSeconds(access_token),
+      session_expires_at: session_expires_at.toISOString(),
+      idle_timeout_seconds: getIdleTimeoutSeconds(),
+      user: payload,
+    };
   }
 }
 

@@ -5,6 +5,7 @@ import { propiedadesRouter } from "../modules/propiedades/infrastructure/http/pr
 import { cuentasRouter } from "../modules/cuentas/infrastructure/http/cuentas.routes.js";
 import { gestionesRouter } from "../modules/gestiones/infrastructure/http/gestiones.routes.js";
 import { metricsRouter } from "../modules/metrics/infrastructure/http/metrics.routes.js";
+import { paymentRemindersRouter } from "../modules/payment-reminders/infrastructure/http/payment-reminders.routes.js";
 
 export const v1Router = Router();
 
@@ -22,3 +23,4 @@ v1Router.use("/propiedades", propiedadesRouter);
 v1Router.use("/cuentas", cuentasRouter);
 v1Router.use("/gestiones", gestionesRouter);
 v1Router.use("/metrics", metricsRouter);
+v1Router.use("/payment-reminders", paymentRemindersRouter);

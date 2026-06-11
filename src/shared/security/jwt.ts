@@ -5,7 +5,7 @@ import { ApiError } from "../http/error-handler.js";
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "dev_access_secret";
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "dev_refresh_secret";
 const ACCESS_EXPIRES_IN = (process.env.JWT_ACCESS_EXPIRES_IN || "15m") as jwt.SignOptions["expiresIn"];
-const REFRESH_EXPIRES_IN = (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"];
+const REFRESH_EXPIRES_IN = (process.env.JWT_REFRESH_EXPIRES_IN || "1d") as jwt.SignOptions["expiresIn"];
 
 type UserPayload = {
   id: string;
@@ -90,4 +90,18 @@ export function getRefreshTokenExpirationDate(token: string): Date {
   }
 
   return new Date(decoded.exp * 1000);
+}
+
+export function getAccessTokenExpiresInSeconds(token: string): number {
+  const decoded = jwt.decode(token);
+  if (
+    !decoded ||
+    typeof decoded === "string" ||
+    typeof decoded.exp !== "number" ||
+    typeof decoded.iat !== "number"
+  ) {
+    throw new ApiError(500, "AUTH_TOKEN_ERROR", "No se pudo determinar expiracion del access token");
+  }
+
+  return decoded.exp - decoded.iat;
 }

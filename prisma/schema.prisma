@@ -71,11 +71,19 @@ enum EstadoCuenta {
 }
 
 enum EtapaProceso {
-  inicial
+  radicacion
+  inadmision
+  subsanacion
+  mandamiento_de_pago
+  medidas_radicadas
   notificacion
-  conciliacion
-  demanda
+  sentencia
+  liquidacion_de_costas
   ejecucion
+  liquidacion_del_credito
+  remate
+  rechazado
+  terminacion
 
   @@map("etapa_proceso_enum")
 }
@@ -126,6 +134,11 @@ model Propiedad {
   direccion       String?
   notas           String?
 
+  cobro_nombre       String
+  cobro_tipo_persona TipoPersona
+  cobro_documento    String
+  cobro_email        String
+
   monto_a_la_fecha Decimal @default(0) @db.Decimal(14, 2)
 
   /// Máximo de dias_en_mora en historial de esta propiedad (denormalizado para listados).
@@ -138,12 +151,31 @@ model Propiedad {
   historial_pagos HistorialPago[]
   gestiones       Gestion[]
   cuentas         Cuenta[]
+  payment_reminder_emails PaymentReminderEmail[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@index([cliente_id], map: "idx_propiedades_cliente_id")
   @@map("propiedades")
+}
+
+model PaymentReminderEmail {
+  id            String    @id @default(uuid())
+  propiedad_id  String
+  propiedad     Propiedad @relation(fields: [propiedad_id], references: [id])
+  cliente_email String
+  subject       String
+  body_html     String?   @db.Text
+  body_text     String?   @db.Text
+  status        String
+  provider_id   String?
+  error_message String?
+  sent_at       DateTime?
+  created_at    DateTime  @default(now())
+
+  @@index([propiedad_id, created_at(sort: Desc)], map: "idx_payment_reminder_emails_propiedad_created")
+  @@map("payment_reminder_emails")
 }
 
 model HistorialPago {
@@ -215,6 +247,8 @@ model RefreshToken {
 
   token_hash           String
   expires_at           DateTime
+  session_expires_at   DateTime
+  last_used_at         DateTime
   revoked_at           DateTime?
   replaced_by_token_id String?
 

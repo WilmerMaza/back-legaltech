@@ -1,6 +1,7 @@
 import type { AuthUserPayload } from "../../domain/ports/auth-persistence.port.js";
 import type { TokenServicePort } from "../../domain/ports/token-service.port.js";
 import {
+  getAccessTokenExpiresInSeconds,
   getRefreshTokenExpirationDate,
   hashToken,
   signAccessToken,
@@ -23,6 +24,10 @@ export class JwtTokenService implements TokenServicePort {
 
   getRefreshTokenExpirationDate(token: string): Date {
     return getRefreshTokenExpirationDate(token);
+  }
+
+  getAccessTokenExpiresInSeconds(token: string): number {
+    return getAccessTokenExpiresInSeconds(token);
   }
 
   hashToken(token: string): string {

@@ -1,4 +1,5 @@
 import type {
+  CobroFields,
   PropiedadesPersistencePort,
   Propiedad,
   TipoPropiedad,
@@ -14,7 +15,8 @@ export class CreatePropiedadUseCase {
     direccion?: string;
     notas?: string;
     saldo_inicial?: number;
-  }): Promise<Propiedad> {
+    fecha_inicio_cobro?: string | null;
+  } & CobroFields): Promise<Propiedad> {
     return this.deps.propiedadesPersistence.createPropiedad({
       ...input,
     });
