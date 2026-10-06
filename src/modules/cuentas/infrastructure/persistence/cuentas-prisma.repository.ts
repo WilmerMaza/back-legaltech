@@ -197,7 +197,9 @@ function mapCuenta(row: CuentaRow): Cuenta {
     cobro_email: cobroSnapshot.cobro_email,
     deudores,
     monto_a_la_fecha: row.monto_a_la_fecha,
-    honorarios_monto: row.honorarios_monto ?? null,
+    // Decimal → number para que el front no reciba string JSON y pierda el override.
+    honorarios_monto:
+      row.honorarios_monto == null ? null : Number(row.honorarios_monto),
     edad_mora_dias: edadViva ?? row.edad_mora_dias,
     fecha_inicio_cobro: fechaInicioCobro,
     fecha_fin_cobro: row.fecha_fin_cobro,
