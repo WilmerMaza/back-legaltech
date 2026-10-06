@@ -90,6 +90,21 @@ enum EtapaProceso {
   @@map("etapa_proceso_enum")
 }
 
+enum EtapaTutela {
+  radicacion
+  admision
+  inadmision
+  requerimiento
+  sentencia
+  impugnacion
+  desacato
+  admite_impugnacion
+  otro
+  finalizada
+
+  @@map("etapa_tutela_enum")
+}
+
 model Cliente {
   id            String      @id @default(uuid())
   nombre        String
@@ -105,11 +120,45 @@ model Cliente {
   creditors Creditor[]
   usuarios  Usuario[]
   deudores  Deudor[]
+  tutelas   Tutela[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   @@map("clientes")
+}
+
+/// Acción de tutela en seguimiento por el equipo interno; alerta por correo al staff antes de vencer.
+model Tutela {
+  id               String      @id @default(uuid())
+  cliente_id       String?
+  cliente          Cliente?    @relation(fields: [cliente_id], references: [id])
+  fecha_radicacion DateTime?   @db.Date
+  radicado         String?
+  juzgado          String?
+  accionante       String
+  accionado        String
+  derecho          String      @default("PETICION")
+  vencimiento      DateTime?   @db.Date
+  etapa            EtapaTutela @default(radicacion)
+  /// Día en que la tutela entró a la etapa actual; base del término (salvo SENTENCIA: radicación).
+  fecha_etapa      DateTime?   @db.Date
+  observaciones    String?
+  /// Nota corta visible en el correo de alerta.
+  nota             String?
+
+  alerta_por_vencer_enviada_at DateTime?
+  alerta_vencida_enviada_at    DateTime?
+
+  /// Soft delete: la fila se conserva para trazabilidad; `deleted_by` = email de quien la eliminó.
+  deleted_at DateTime?
+  deleted_by String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  @@index([cliente_id], map: "idx_tutelas_cliente")
+  @@index([vencimiento], map: "idx_tutelas_vencimiento")
+  @@map("tutelas")
 }
 
 /// Acreedor (cliente del cliente SaaS): entrega cartera a cobrar.
