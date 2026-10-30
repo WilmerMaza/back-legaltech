@@ -21,8 +21,13 @@ export type PqrParaAlerta = EstadoAlertaPqr & {
 export interface PqrsAlertaRepository {
   /** PQR abiertas con vencimiento ≤ `hastaYmd` y alguna alerta pendiente. */
   listarCandidatas(hastaYmd: string): Promise<PqrParaAlerta[]>;
-  /** Marca solo las que aún no tenían el flag. `claimed` = filas realmente actualizadas. */
-  marcarAlertas(input: { por_vencer: string[]; vencidas: string[]; at: Date }): Promise<{ claimed: number }>;
+  /** Marca solo las que aún no tenían el aviso de hoy. `claimed` = filas realmente actualizadas. */
+  marcarAlertas(input: {
+    por_vencer: string[];
+    vencidas: string[];
+    at: Date;
+    hoyYmd: string;
+  }): Promise<{ claimed: number }>;
 }
 
 export type EnviarAlertasPqrsDeps = {
@@ -125,6 +130,7 @@ export class EnviarAlertasPqrsUseCase {
       por_vencer: porVencer.map((i) => i.id),
       vencidas: vencidas.map((i) => i.id),
       at: now,
+      hoyYmd: hoy,
     });
     if (claimed === 0) return result;
 

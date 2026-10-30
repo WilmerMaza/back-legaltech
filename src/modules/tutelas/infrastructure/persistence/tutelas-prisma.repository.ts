@@ -58,14 +58,19 @@ export class TutelasAlertaPrismaRepository implements TutelasAlertaRepository {
         deleted_at: null,
         vencimiento: { not: null, lte: dateFromYmd(hastaYmd) as Date },
         etapa: { notIn: [...ETAPAS_TUTELA_SIN_ALERTA] },
-        OR: [{ alerta_por_vencer_enviada_at: null }, { alerta_vencida_enviada_at: null }],
       },
       include: tutelaInclude,
     });
     return rows.map(toTutelaParaAlerta);
   }
 
-  async marcarAlertas(input: { por_vencer: string[]; vencidas: string[]; at: Date }): Promise<{ claimed: number }> {
+  async marcarAlertas(input: {
+    por_vencer: string[];
+    vencidas: string[];
+    at: Date;
+    hoyYmd: string;
+  }): Promise<{ claimed: number }> {
+    const inicioHoy = dateFromYmd(input.hoyYmd);
     const ops = [];
     if (input.por_vencer.length > 0) {
       ops.push(
@@ -75,10 +80,16 @@ export class TutelasAlertaPrismaRepository implements TutelasAlertaRepository {
         }),
       );
     }
-    if (input.vencidas.length > 0) {
+    if (input.vencidas.length > 0 && inicioHoy) {
       ops.push(
         prisma.tutela.updateMany({
-          where: { id: { in: input.vencidas }, alerta_vencida_enviada_at: null },
+          where: {
+            id: { in: input.vencidas },
+            OR: [
+              { alerta_vencida_enviada_at: null },
+              { alerta_vencida_enviada_at: { lt: inicioHoy } },
+            ],
+          },
           data: { alerta_vencida_enviada_at: input.at },
         }),
       );

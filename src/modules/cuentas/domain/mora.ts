@@ -7,9 +7,13 @@ import type { EstadoPago } from "./ports/cuentas-persistence.port.js";
  *   (si el mes tiene menos de 30 días, el último día del mes: febrero).
  * - Si no paga, el día 1 del mes siguiente ese periodo ya tiene 30 días de mora
  *   (mes comercial de 30 días) y sigue sumando.
- * - `pagado` con `fecha_pago`: el cómputo cierra ese día.
- * - `pagado` sin `fecha_pago` → 0 (dato incompleto).
- * - `pendiente` / `parcial` / `vencido` → hasta `referenceTodayYmd` (America/Bogota).
+ * - La mora de un movimiento se cierra solo si el cargo quedó cubierto
+ *   (`valor_pagado` >= `valor_cobrado`) y el estado es `pagado`.
+ *   Un abono parcial sigue contando hasta hoy, aunque el estado diga `pagado`.
+ * - Obligación cubierta con `fecha_pago`: el cómputo cierra ese día.
+ * - Obligación cubierta sin `fecha_pago` → 0 (dato incompleto).
+ * - Cargo aún abierto (`pendiente` / `parcial` / `vencido`, o abono incompleto)
+ *   → hasta `referenceTodayYmd` (America/Bogota).
  */
 export type ComputeDiasEnMoraInput = {
   periodo: string;
@@ -17,12 +21,16 @@ export type ComputeDiasEnMoraInput = {
   fecha_pago: Date | null;
   /** YYYY-MM-DD en zona de negocio; inyectable en tests. */
   referenceTodayYmd: string;
+  valor_cobrado?: number | null;
+  valor_pagado?: number | null;
 };
 
 export type MovimientoMora = {
   periodo: string;
   estado_pago: EstadoPago;
   fecha_pago: Date | null;
+  valor_cobrado?: number | null;
+  valor_pagado?: number | null;
 };
 
 function pad2(n: number): string {
@@ -119,16 +127,34 @@ export function commercialMoraDays(periodo: string, endYmd: string): number {
   return commercialMoraDaysFromDue(dueYmdOfPeriod(periodo), endYmd);
 }
 
+/**
+ * El cargo sigue abierto si no está cubierto. Sin montos, solo `pagado` cierra la mora.
+ * Un abono (`valor_pagado` < `valor_cobrado`) no cierra la mora aunque el estado sea `pagado`.
+ */
+export function movimientoSigueEnMora(input: {
+  estado_pago: EstadoPago;
+  valor_cobrado?: number | null;
+  valor_pagado?: number | null;
+}): boolean {
+  const tieneMontos = input.valor_cobrado != null || input.valor_pagado != null;
+  if (!tieneMontos) return input.estado_pago !== "pagado";
+
+  const cobrado = Number(input.valor_cobrado ?? 0);
+  const pagado = Number(input.valor_pagado ?? 0);
+  if (Number.isFinite(cobrado) && Number.isFinite(pagado) && cobrado > pagado) return true;
+  if (input.estado_pago === "pagado") return false;
+  if (cobrado > 0 && pagado >= cobrado) return false;
+  return true;
+}
+
 export function computeDiasEnMora(input: ComputeDiasEnMoraInput): number {
-  let endYmd: string;
-  if (input.estado_pago === "pagado") {
+  const sigue = movimientoSigueEnMora(input);
+  if (!sigue) {
     if (!input.fecha_pago) return 0;
-    endYmd = dateToYmdUtc(input.fecha_pago);
-  } else {
-    endYmd = input.referenceTodayYmd;
+    return commercialMoraDays(input.periodo, dateToYmdUtc(input.fecha_pago));
   }
 
-  return commercialMoraDays(input.periodo, endYmd);
+  return commercialMoraDays(input.periodo, input.referenceTodayYmd);
 }
 
 /** Edad de mora de la cuenta: máximo de días entre movimientos activos. */
@@ -143,6 +169,8 @@ export function maxEdadMoraDias(
       periodo: m.periodo,
       estado_pago: m.estado_pago,
       fecha_pago: m.fecha_pago,
+      valor_cobrado: m.valor_cobrado,
+      valor_pagado: m.valor_pagado,
       referenceTodayYmd,
     });
     max = max === null ? dias : Math.max(max, dias);
@@ -150,17 +178,43 @@ export function maxEdadMoraDias(
   return max;
 }
 
+function oldestPeriodDueYmd(movimientos: MovimientoMora[]): string | null {
+  let oldest: string | null = null;
+  for (const m of movimientos) {
+    if (!/^\d{4}-\d{2}$/.test(m.periodo)) continue;
+    if (oldest == null || m.periodo < oldest) oldest = m.periodo;
+  }
+  return oldest ? dueYmdOfPeriod(oldest) : null;
+}
+
 /**
  * Sin historial: usa inicio de cobro o, si no hay, el alta de la cuenta como plazo.
- * Con historial: MAX de periodos (ignora el fallback).
+ * Con historial y saldo pendiente: MAX de periodos aún abiertos (un abono no la borra).
+ * Con historial y deuda en 0: 0 días (cuenta saldada; no conserva la mora histórica).
  */
 export function resolveEdadMoraDias(input: {
   movimientos: MovimientoMora[];
   fechaInicioCobroYmd: string | null;
   createdAtYmd: string;
   referenceTodayYmd: string;
+  /** Saldo de la cuenta. Si se omite, se conserva el máximo histórico. */
+  saldoCuenta?: number | null;
 }): number | null {
+  const saldo =
+    input.saldoCuenta == null || !Number.isFinite(Number(input.saldoCuenta))
+      ? null
+      : Number(input.saldoCuenta);
+
+  if (saldo != null && saldo <= 0 && input.movimientos.length > 0) return 0;
+
   const fromHist = maxEdadMoraDias(input.movimientos, input.referenceTodayYmd);
+  if (saldo != null && saldo > 0 && (fromHist == null || fromHist === 0)) {
+    const hayAbierta = input.movimientos.some((m) => movimientoSigueEnMora(m));
+    if (!hayAbierta) {
+      const dueYmd = input.fechaInicioCobroYmd || oldestPeriodDueYmd(input.movimientos);
+      if (dueYmd) return commercialMoraDaysFromDue(dueYmd, input.referenceTodayYmd);
+    }
+  }
   if (fromHist != null) return fromHist;
   const dueYmd = input.fechaInicioCobroYmd || input.createdAtYmd;
   if (!dueYmd) return null;

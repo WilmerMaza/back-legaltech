@@ -80,33 +80,44 @@ export class PqrsAlertaPrismaRepository implements PqrsAlertaRepository {
         deleted_at: null,
         cerrada: false,
         vencimiento: { not: null, lte: dateFromYmd(hastaYmd) as Date },
-        OR: [{ alerta_por_vencer_enviada_at: null }, { alerta_vencida_enviada_at: null }],
       },
       include: pqrInclude,
     });
     return rows.map(toPqrParaAlerta);
   }
 
-  async marcarAlertas(input: { por_vencer: string[]; vencidas: string[]; at: Date }): Promise<{ claimed: number }> {
-    const ops = [];
+  async marcarAlertas(input: {
+    por_vencer: string[];
+    vencidas: string[];
+    at: Date;
+    hoyYmd: string;
+  }): Promise<{ claimed: number }> {
+    const inicioHoy = dateFromYmd(input.hoyYmd);
+    const avisos = [];
     if (input.por_vencer.length > 0) {
-      ops.push(
+      avisos.push(
         prisma.pqr.updateMany({
           where: { id: { in: input.por_vencer }, alerta_por_vencer_enviada_at: null },
           data: { alerta_por_vencer_enviada_at: input.at },
         }),
       );
     }
-    if (input.vencidas.length > 0) {
-      ops.push(
+    if (input.vencidas.length > 0 && inicioHoy) {
+      avisos.push(
         prisma.pqr.updateMany({
-          where: { id: { in: input.vencidas }, alerta_vencida_enviada_at: null },
+          where: {
+            id: { in: input.vencidas },
+            OR: [
+              { alerta_vencida_enviada_at: null },
+              { alerta_vencida_enviada_at: { lt: inicioHoy } },
+            ],
+          },
           data: { alerta_vencida_enviada_at: input.at },
         }),
       );
     }
-    if (ops.length === 0) return { claimed: 0 };
-    const results = await prisma.$transaction(ops);
+    if (avisos.length === 0) return { claimed: 0 };
+    const results = await prisma.$transaction(avisos);
     return { claimed: results.reduce((n, r) => n + r.count, 0) };
   }
 }

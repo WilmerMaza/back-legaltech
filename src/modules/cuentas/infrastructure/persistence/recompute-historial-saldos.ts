@@ -37,6 +37,8 @@ export async function recomputeHistorialSaldosForCuenta(
       periodo: row.periodo,
       estado_pago: row.estado_pago,
       fecha_pago: row.fecha_pago,
+      valor_cobrado: Number(row.valor_cobrado),
+      valor_pagado: Number(row.valor_pagado),
       referenceTodayYmd,
     });
 

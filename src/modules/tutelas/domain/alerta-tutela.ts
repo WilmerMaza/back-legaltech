@@ -12,7 +12,11 @@ export type EstadoAlertaTutela = {
   alerta_vencida_enviada_at: Date | null;
 };
 
-/** Qué alerta corresponde hoy (cada tipo se envía una sola vez por vencimiento). */
+/**
+ * Qué alerta corresponde hoy.
+ * «Por vencer» una vez, a 2 días hábiles. «Vencida» cada día hábil mientras
+ * la etapa no cambie. Al cambiarla, el término de esa etapa vuelve a empezar.
+ */
 export function clasificarAlertaTutela(
   tutela: EstadoAlertaTutela,
   hoyYmd: string,
@@ -20,9 +24,7 @@ export function clasificarAlertaTutela(
   if (!tutela.vencimiento) return null;
   if (ETAPAS_TUTELA_SIN_ALERTA.includes(tutela.etapa)) return null;
 
-  if (tutela.vencimiento < hoyYmd) {
-    return tutela.alerta_vencida_enviada_at ? null : "vencida";
-  }
+  if (tutela.vencimiento < hoyYmd) return "vencida";
 
   const restantes = diasHabilesEntre(hoyYmd, tutela.vencimiento);
   if (restantes <= DIAS_HABILES_AVISO_TUTELA && !tutela.alerta_por_vencer_enviada_at) {
