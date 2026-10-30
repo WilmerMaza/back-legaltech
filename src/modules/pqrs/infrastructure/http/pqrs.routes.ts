@@ -6,6 +6,7 @@ import {
   listarHistorial,
   registrarHistorial,
 } from "../../../../shared/infrastructure/historial/historial-cambios.js";
+import { getBusinessTodayYmd } from "../../../cuentas/domain/business-calendar.js";
 import { prisma } from "../../../../shared/infrastructure/prisma/prisma.client.js";
 import { requireAuth, requireStaff } from "../../../../shared/security/auth.middleware.js";
 import { isCronAuthorized } from "../../../../shared/security/cron-auth.js";
@@ -21,7 +22,7 @@ import {
   ymdFromDate,
 } from "../../../tutelas/infrastructure/persistence/tutelas-prisma.repository.js";
 import { EnviarAlertasPqrsUseCase } from "../../application/enviar-alertas-pqrs.use-case.js";
-import { calcularVencimientoPqr } from "../../domain/alerta-pqr.js";
+import { calcularVencimientoPqr, vencimientoTrasCambioDeEstado } from "../../domain/alerta-pqr.js";
 import {
   PqrsAlertaPrismaRepository,
   esResponsableValido,
@@ -160,14 +161,26 @@ pqrsRouter.patch("/:id", async (req, res, next) => {
     const current = await findPqrActiva(req.params.id);
     await assertResponsable(dto.responsable_id);
 
+    const estadoCambia =
+      dto.estado !== undefined && (dto.estado ?? "") !== (current.estado ?? "");
+    const quedaAbierta = dto.cerrada !== undefined ? !dto.cerrada : !current.cerrada;
+    const vencimientoActual = ymdFromDate(current.vencimiento);
+    const reinicio = vencimientoTrasCambioDeEstado({
+      estadoCambia,
+      quedaAbierta,
+      vencimientoActual,
+      vencimientoEnviado: dto.vencimiento,
+      hoyYmd: getBusinessTodayYmd(),
+    });
     const vencimiento =
-      dto.vencimiento !== undefined
-        ? dto.vencimiento
-        : dto.fecha_radicacion !== undefined
-          ? calcularVencimientoPqr(dto.fecha_radicacion)
-          : undefined;
-    const vencimientoCambia =
-      vencimiento !== undefined && vencimiento !== ymdFromDate(current.vencimiento);
+      reinicio !== undefined
+        ? reinicio
+        : dto.vencimiento !== undefined
+          ? dto.vencimiento
+          : dto.fecha_radicacion !== undefined
+            ? calcularVencimientoPqr(dto.fecha_radicacion)
+            : undefined;
+    const vencimientoCambia = vencimiento !== undefined && vencimiento !== vencimientoActual;
 
     const actualizada = await prisma.$transaction(async (tx) => {
       const row = await tx.pqr.update({
@@ -184,7 +197,7 @@ pqrsRouter.patch("/:id", async (req, res, next) => {
           vencimiento: dateFromYmd(vencimiento),
           estado: dto.estado,
           cerrada: dto.cerrada,
-          ...(vencimientoCambia
+          ...(estadoCambia || vencimientoCambia
             ? { alerta_por_vencer_enviada_at: null, alerta_vencida_enviada_at: null }
             : {}),
         },

@@ -209,7 +209,7 @@ tutelasRouter.patch("/:id", async (req, res, next) => {
           fecha_etapa: dateFromYmd(fechaEtapa),
           observaciones: dto.observaciones,
           nota: dto.nota,
-          ...(vencimientoCambia
+          ...(etapaCambia || vencimientoCambia
             ? { alerta_por_vencer_enviada_at: null, alerta_vencida_enviada_at: null }
             : {}),
         },

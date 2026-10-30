@@ -16,6 +16,7 @@ export const ETAPAS_PROCESO_ORDENADAS = [
   { value: "liquidacion_del_credito", label: "LIQUIDACIÓN DEL CRÉDITO" },
   { value: "remate", label: "REMATE" },
   { value: "rechazado", label: "RECHAZADO" },
+  { value: "suspendido", label: "SUSPENDIDO" },
   { value: "terminacion", label: "TERMINACIÓN" },
 ] as const;
 

@@ -114,6 +114,8 @@ type HistorialMoraRow = {
   periodo: string;
   estado_pago: EstadoPago;
   fecha_pago: Date | null;
+  valor_cobrado?: unknown;
+  valor_pagado?: unknown;
 };
 
 type CuentaRow = {
@@ -152,7 +154,13 @@ const cuentaReadInclude = {
   ...cuentaDeudoresInclude,
   historial_pagos: {
     where: { deleted_at: null },
-    select: { periodo: true, estado_pago: true, fecha_pago: true },
+    select: {
+      periodo: true,
+      estado_pago: true,
+      fecha_pago: true,
+      valor_cobrado: true,
+      valor_pagado: true,
+    },
   },
 } as const;
 
@@ -175,10 +183,17 @@ function mapCuenta(row: CuentaRow): Cuenta {
   const createdAtYmd = formatYmdInTimeZone(row.created_at, getBusinessTimeZone());
   const inicioYmd = row.fecha_inicio_cobro ? dateToYmdUtc(row.fecha_inicio_cobro) : null;
   const edadViva = resolveEdadMoraDias({
-    movimientos: row.historial_pagos ?? [],
+    movimientos: (row.historial_pagos ?? []).map((h) => ({
+      periodo: h.periodo,
+      estado_pago: h.estado_pago,
+      fecha_pago: h.fecha_pago,
+      valor_cobrado: Number(h.valor_cobrado ?? 0),
+      valor_pagado: Number(h.valor_pagado ?? 0),
+    })),
     fechaInicioCobroYmd: inicioYmd,
     createdAtYmd,
     referenceTodayYmd: todayYmd,
+    saldoCuenta: Number(row.monto_a_la_fecha ?? 0),
   });
   const fechaInicioCobro =
     row.fecha_inicio_cobro ??
