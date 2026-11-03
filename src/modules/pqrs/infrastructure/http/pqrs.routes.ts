@@ -48,6 +48,7 @@ const enviarAlertas = new EnviarAlertasPqrsUseCase({
 
 /** Campos de la respuesta que quedan en la trazabilidad. */
 const CAMPOS_HISTORIAL_PQR = [
+  "cliente_nombre",
   "responsable_email",
   "solicitante",
   "entidad",
@@ -63,6 +64,12 @@ async function findPqrActiva(id: string) {
   const row = await prisma.pqr.findFirst({ where: { id, deleted_at: null }, include: pqrInclude });
   if (!row) throw new ApiError(404, "NOT_FOUND", "PQR no encontrada");
   return row;
+}
+
+async function assertClienteExiste(clienteId: string | null | undefined): Promise<void> {
+  if (!clienteId) return;
+  const cliente = await prisma.cliente.findUnique({ where: { id: clienteId }, select: { id: true } });
+  if (!cliente) throw new ApiError(400, "CLIENTE_NOT_FOUND", "El cliente indicado no existe");
 }
 
 async function assertResponsable(responsableId: string | null | undefined): Promise<void> {
@@ -120,6 +127,7 @@ pqrsRouter.get("/:id/historial", async (req, res, next) => {
 pqrsRouter.post("/", async (req, res, next) => {
   try {
     const dto = createPqrSchema.parse(req.body);
+    await assertClienteExiste(dto.cliente_id);
     await assertResponsable(dto.responsable_id);
     const vencimiento =
       dto.vencimiento !== undefined ? dto.vencimiento : calcularVencimientoPqr(dto.fecha_radicacion);
@@ -127,6 +135,7 @@ pqrsRouter.post("/", async (req, res, next) => {
     const creada = await prisma.$transaction(async (tx) => {
       const row = await tx.pqr.create({
         data: {
+          cliente_id: dto.cliente_id ?? null,
           responsable_id: dto.responsable_id ?? null,
           solicitante: dto.solicitante,
           entidad: dto.entidad,
@@ -159,6 +168,7 @@ pqrsRouter.patch("/:id", async (req, res, next) => {
   try {
     const dto = patchPqrSchema.parse(req.body);
     const current = await findPqrActiva(req.params.id);
+    await assertClienteExiste(dto.cliente_id);
     await assertResponsable(dto.responsable_id);
 
     const estadoCambia =
@@ -186,6 +196,7 @@ pqrsRouter.patch("/:id", async (req, res, next) => {
       const row = await tx.pqr.update({
         where: { id: current.id },
         data: {
+          cliente_id: dto.cliente_id,
           responsable_id: dto.responsable_id,
           // Al asignar responsable dejan de usarse las iniciales importadas del Excel.
           ...(dto.responsable_id !== undefined ? { gestion: null } : {}),

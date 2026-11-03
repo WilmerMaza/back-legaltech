@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { listarHistorial } from "../../../../shared/infrastructure/historial/historial-cambios.js";
 import { prisma } from "../../../../shared/infrastructure/prisma/prisma.client.js";
 import { STAFF_ROLES } from "../../../../shared/security/roles.js";
 import {
@@ -12,6 +13,7 @@ import type {
 
 export const pqrInclude = {
   responsable: { select: { email: true } },
+  cliente: { select: { nombre: true } },
 } satisfies Prisma.PqrInclude;
 
 type PqrRow = Prisma.PqrGetPayload<{ include: typeof pqrInclude }>;
@@ -22,13 +24,49 @@ function responsableEmail(row: PqrRow): string | null {
 }
 
 export function toPqrResponse(row: PqrRow) {
-  const { responsable: _responsable, ...pqr } = row;
+  const { responsable: _responsable, cliente, ...pqr } = row;
   return {
     ...pqr,
     fecha_radicacion: ymdFromDate(row.fecha_radicacion),
     vencimiento: ymdFromDate(row.vencimiento),
     responsable_email: responsableEmail(row),
+    cliente_nombre: cliente?.nombre ?? null,
   };
+}
+
+/** Campos internos que no salen en el informe del propietario. */
+const CAMPOS_INTERNOS_INFORME = new Set(["cliente_nombre", "responsable_email"]);
+
+/** PQRS del cliente para su informe general. */
+export async function listarPqrsParaInformeCliente(clienteId: string) {
+  const rows = await prisma.pqr.findMany({
+    where: { cliente_id: clienteId, deleted_at: null },
+    orderBy: [{ fecha_radicacion: "desc" }, { created_at: "desc" }],
+  });
+  const historial = await listarHistorial(
+    "pqr",
+    rows.map((r) => r.id),
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    radicado: row.radicado,
+    solicitante: row.solicitante,
+    entidad: row.entidad,
+    asunto: row.asunto,
+    estado: row.estado,
+    cerrada: row.cerrada,
+    fecha_radicacion: ymdFromDate(row.fecha_radicacion),
+    vencimiento: ymdFromDate(row.vencimiento),
+    created_at: row.created_at.toISOString(),
+    historial: historial
+      .filter((h) => h.registro_id === row.id)
+      .map((h) => ({
+        accion: h.accion,
+        created_at: h.created_at,
+        cambios: h.cambios.filter((c) => !CAMPOS_INTERNOS_INFORME.has(c.campo)),
+      }))
+      .filter((h) => h.accion !== "actualizada" || h.cambios.length > 0),
+  }));
 }
 
 function toPqrParaAlerta(row: PqrRow): PqrParaAlerta {
