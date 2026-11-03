@@ -8,6 +8,7 @@ export type AuthContext = {
 export type TipoCuenta =
   | "apartamento"
   | "oficina"
+  | "consultorio"
   | "local"
   | "casa"
   | "bodega"

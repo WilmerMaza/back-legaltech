@@ -81,6 +81,7 @@ const cuentaBaseSchema = z.object({
   tipo_cuenta: z.enum([
     "apartamento",
     "oficina",
+    "consultorio",
     "local",
     "casa",
     "bodega",

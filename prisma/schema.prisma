@@ -28,6 +28,7 @@ enum TipoPersona {
 enum TipoCuenta {
   apartamento
   oficina
+  consultorio
   local
   casa
   bodega
@@ -74,6 +75,7 @@ enum EstadoProcesoLegal {
 
 enum EtapaProceso {
   radicacion
+  admision
   inadmision
   subsanacion
   mandamiento_de_pago
@@ -84,6 +86,9 @@ enum EtapaProceso {
   ejecucion
   liquidacion_del_credito
   remate
+  recurso
+  traslado
+  otro
   rechazado
   suspendido
   terminacion
@@ -122,6 +127,7 @@ model Cliente {
   usuarios  Usuario[]
   deudores  Deudor[]
   tutelas   Tutela[]
+  pqrs      Pqr[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -165,6 +171,9 @@ model Tutela {
 /// Derechos de petición / PQR radicados ante entidades (seguimiento interno).
 model Pqr {
   id               String    @id @default(uuid())
+  /// Cliente del portafolio vinculado (aparece en su informe general).
+  cliente_id       String?
+  cliente          Cliente?  @relation(fields: [cliente_id], references: [id])
   /// Legacy: iniciales importadas del Excel (AO, NB…). El responsable real es `responsable_id`.
   gestion          String?
   /// Usuario del staff que lleva la PQR.
@@ -190,6 +199,7 @@ model Pqr {
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
 
+  @@index([cliente_id], map: "idx_pqrs_cliente")
   @@index([vencimiento], map: "idx_pqrs_vencimiento")
   @@index([responsable_id], map: "idx_pqrs_responsable")
   @@map("pqrs")

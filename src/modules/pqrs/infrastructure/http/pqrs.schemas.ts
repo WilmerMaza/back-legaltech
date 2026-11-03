@@ -9,6 +9,8 @@ const optionalText = z
   .optional();
 
 export const createPqrSchema = z.object({
+  /** Cliente del portafolio (informe general). */
+  cliente_id: z.string().uuid().nullable().optional(),
   /** Usuario del staff que lleva la PQR. */
   responsable_id: z.string().uuid().nullable().optional(),
   solicitante: z.string().trim().min(1),
