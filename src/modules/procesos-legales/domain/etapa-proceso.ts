@@ -5,6 +5,7 @@
 
 export const ETAPAS_PROCESO_ORDENADAS = [
   { value: "radicacion", label: "RADICACIÓN" },
+  { value: "admision", label: "ADMISIÓN" },
   { value: "inadmision", label: "INADMISIÓN" },
   { value: "subsanacion", label: "SUBSANACIÓN" },
   { value: "mandamiento_de_pago", label: "MANDAMIENTO DE PAGO" },
@@ -15,6 +16,9 @@ export const ETAPAS_PROCESO_ORDENADAS = [
   { value: "ejecucion", label: "EJECUCIÓN" },
   { value: "liquidacion_del_credito", label: "LIQUIDACIÓN DEL CRÉDITO" },
   { value: "remate", label: "REMATE" },
+  { value: "recurso", label: "RECURSO" },
+  { value: "traslado", label: "TRASLADO" },
+  { value: "otro", label: "OTRO" },
   { value: "rechazado", label: "RECHAZADO" },
   { value: "suspendido", label: "SUSPENDIDO" },
   { value: "terminacion", label: "TERMINACIÓN" },

@@ -28,6 +28,7 @@ enum TipoPersona {
 enum TipoCuenta {
   apartamento
   oficina
+  consultorio
   local
   casa
   bodega
@@ -74,6 +75,7 @@ enum EstadoProcesoLegal {
 
 enum EtapaProceso {
   radicacion
+  admision
   inadmision
   subsanacion
   mandamiento_de_pago
@@ -84,6 +86,9 @@ enum EtapaProceso {
   ejecucion
   liquidacion_del_credito
   remate
+  recurso
+  traslado
+  otro
   rechazado
   suspendido
   terminacion
